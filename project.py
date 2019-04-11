@@ -4,8 +4,8 @@ import itertools
 import time
 import copy
 import operator
-import numba
 from tqdm import tqdm
+
 
 
 def Input_file(path):
@@ -95,7 +95,7 @@ def Input_file(path):
         block_total = 0
         for i in block:
             block_total += block[i]
-        for i in itertools.combinations(possible_position, block_total):
+        for i in tqdm(itertools.combinations(possible_position, block_total)):
             b = 0
             if len(block) == 2:
                 keys = list(block.keys())
@@ -173,6 +173,7 @@ def Input_file(path):
                 # print(block_class)
         print(cllll)
         print(grid)
+        return cllll, grid
 
 
 def find_solution(block_class, laser, goal):
