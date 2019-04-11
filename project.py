@@ -8,20 +8,7 @@ import numba
 from tqdm import tqdm
 
 
-def Input_file(path):    
-    '''
-    This is a function to read in test data sets from bff files. 
-    It will remove comments and unrelative symbols and extract the following information that we will need after:
-    Matrix of lazor board, with fixed blocks; Available blocks: number and type; 
-    Laser start point and direction; Points that lazor need to intersect to complete the level.
-    It also define
-
-    **Parameters**
-        path: the path of the board file
-
-    **Returns**
-        
-    '''
+def Input_file(path):
     name_list = []
     file_list = []
     for fpathe, dirs, i in os.walk(path):
@@ -32,8 +19,6 @@ def Input_file(path):
                 file_list.append(os.path.join(fpathe, ff))
             else:
                 continue
-                
-    # Extract information from bff file and append to corresponding lists                
     for i in file_list:
         f = open(i)
         grid = []
@@ -111,6 +96,7 @@ def Input_file(path):
         for i in block:
             block_total += block[i]
         for i in itertools.combinations(possible_position, block_total):
+            b = 0
             if len(block) == 2:
                 keys = list(block.keys())
                 num1 = block.get(keys[0])
@@ -135,9 +121,15 @@ def Input_file(path):
                     a = find_solution(block_class, laser, points)
                     # print(a, i)
                     if a is True:
+                        b = 2
                         print(a, ii, i, cllll)
+                        break
                     else:
                         continue
+                if b == 2:
+                    break
+                else:
+                    pass
 
             elif len(block) == 3:
                 num1 = block.get('A')
@@ -174,6 +166,7 @@ def Input_file(path):
                 # print(a, i)
                 if a is True:
                     print(a, cllll)
+                    break
                 else:
                     continue
                 # print(find_solution(block_class, laser, points), i)
@@ -186,7 +179,7 @@ def find_solution(block_class, laser, goal):
     count = 0
     count2 = 0
     stop = []
-    stop2 = []
+    contain = []
     result = []
     update_laser3 = []
     while True:
@@ -222,6 +215,10 @@ def find_solution(block_class, laser, goal):
                                 # mid[cord[0]] = [candidate, out_point, True]
                             else:
                                 update_laser[laser2.index(cord)] = [cord[0], out_point, True]
+                                if cord in contain:
+                                    pass
+                                else:
+                                    contain.append(cord)
                                 # mid[cord[0]] = [candidate, out_point, True]
                         else:
                             pass
@@ -251,17 +248,20 @@ def find_solution(block_class, laser, goal):
                             candidate2 = candidate
                             out_point2 = out_point
                         else:
-                            if [cord[0], out_point[0], True] in update_laser2:
-                                if [cord[0], out_point[1], True] in update_laser2:
-                                    pass
-                                else:
-                                    update_laser2.append([cord[0], out_point[1], True])
+                            if [candidate, out_point[0], True] in contain:
+                                pass
                             else:
-                                if [cord[0], out_point[1], True] in update_laser2:
-                                    update_laser2.append([cord[0], out_point[0], True])
+                                if [cord[0], out_point[0], True] in update_laser2:
+                                    if [cord[0], out_point[1], True] in update_laser2:
+                                        pass
+                                    else:
+                                        update_laser2.append([cord[0], out_point[1], True])
                                 else:
-                                    update_laser2.append([cord[0], out_point[0], True])
-                                    update_laser2.append([cord[0], out_point[1], True])
+                                    if [cord[0], out_point[1], True] in update_laser2:
+                                        update_laser2.append([cord[0], out_point[0], True])
+                                    else:
+                                        update_laser2.append([cord[0], out_point[0], True])
+                                        update_laser2.append([cord[0], out_point[1], True])
                     else:
                         pass
             if candidate2 != 'none':
@@ -294,10 +294,13 @@ def find_solution(block_class, laser, goal):
                 if cord in update_laser2:
                     pass
                 else:
-                    update_laser2.append(cord)
+                    if cord in contain:
+                        pass
+                    else:
+                        update_laser2.append(cord)
         # print(update_laser2, type(update_laser2))
         # print(mid)
-        print(update_laser2)
+        # print(update_laser2)
         length = len(result)
         if length in stop:
             count += 1
@@ -577,7 +580,7 @@ class Block(object):
 
 if __name__ == "__main__":
     start = time.time()
-    # Input_file("bff")
+    Input_file("bff")
     # b = Block((3, 3))
     # b2 = Block((1, 3))
     # b3 = Block((0, 2))
@@ -596,14 +599,14 @@ if __name__ == "__main__":
     # block_class = [(b, 'A'), (b2, 'A'), (b3, 'C')]
     # print(find_solution(block_class, [[(2, 7), (3, 6), True]], [(3, 0), (4, 3), (2, 5), (4, 7)]))
     # print(vector_in_same_direction([(2, 3), (3, 2), True], [(3, 2), (2, 3), True]))
-    b = Block((2, 2))
-    b2 = Block((1, 2))
-    b3 = Block((0, 0))
-    b4 = Block((2, 0))
-    b5 = Block((1, 0))
-    block_class = [(b, 'A'), (b2, 'A'), (b3, 'A'), (b4, 'C'), (b5, 'B')]
-    # print(b4.refract((4, 5), (3, 4)))
-    print(find_solution(block_class, [[(4, 5), (3, 4), True]], [(1, 2), (6, 3)]))
+    # b = Block((1, 2))
+    # b2 = Block((2, 0))
+    # b3 = Block((0, 0))
+    # b4 = Block((2, 2))
+    # b5 = Block((1, 0))
+    # block_class = [(b, 'A'), (b2, 'A'), (b3, 'A'), (b4, 'C'), (b5, 'B')]
+    # # print(b4.refract((4, 5), (3, 4)))
+    # print(find_solution(block_class, [[(4, 5), (3, 4), True]], [(1, 2), (6, 3)]))
     # for i in a:
     #     print(a[i])
     end = time.time()
