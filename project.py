@@ -122,7 +122,7 @@ def Input_file(path):
                     # print(a, i)
                     if a is True:
                         b = 2
-                        print(a, ii, i, cllll)
+                        print(a, ii, i)
                         break
                     else:
                         continue
@@ -165,12 +165,14 @@ def Input_file(path):
                 a = find_solution(block_class, laser, points)
                 # print(a, i)
                 if a is True:
-                    print(a, cllll)
+                    print(a)
                     break
                 else:
                     continue
                 # print(find_solution(block_class, laser, points), i)
                 # print(block_class)
+        print(cllll)
+        print(grid)
 
 
 def find_solution(block_class, laser, goal):
