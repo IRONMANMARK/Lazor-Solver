@@ -8,7 +8,20 @@ import numba
 from tqdm import tqdm
 
 
-def Input_file(path):
+def Input_file(path):    
+    '''
+    This is a function to read in test data sets from bff files. 
+    It will remove comments and unrelative symbols and extract the following information that we will need after:
+    Matrix of lazor board, with fixed blocks; Available blocks: number and type; 
+    Laser start point and direction; Points that lazor need to intersect to complete the level.
+    It also define
+
+    **Parameters**
+        path: the path of the board file
+
+    **Returns**
+        
+    '''
     name_list = []
     file_list = []
     for fpathe, dirs, i in os.walk(path):
@@ -19,6 +32,8 @@ def Input_file(path):
                 file_list.append(os.path.join(fpathe, ff))
             else:
                 continue
+                
+    # Extract information from bff file and append to corresponding lists                
     for i in file_list:
         f = open(i)
         grid = []
