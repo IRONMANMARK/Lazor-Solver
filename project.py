@@ -3,6 +3,8 @@ import numpy as np
 import itertools
 import time
 import copy
+import operator
+import numba
 from tqdm import tqdm
 
 
@@ -42,7 +44,7 @@ def Input_file(path):
                             line[i] = int(line[i])
                         except:
                             continue
-                    laser.append([(line[1], line[2]), (line[1] + line[3], line[2] + line[4])])
+                    laser.append([(line[1], line[2]), (line[1] + line[3], line[2] + line[4]), True])
                 elif line[0] == 'P':
                     line = line.split(' ')
                     for i in range(len(line)):
@@ -73,25 +75,6 @@ def Input_file(path):
         print(laser)
         # print(block)
         print(points)
-        # print(grid)
-        # grid_matrix = np.zeros((2*len(grid)+1, 2*len(grid[0])+1))
-        # for i in range(len(grid)):
-        #     for ii in range(len(grid[0])):
-        #         if grid[i][ii] == 'x':
-        #             x_cord = 2*i + 1
-        #             y_cord = 2*ii + 1
-        #             grid_matrix[x_cord + 1][y_cord] = 1
-        #             grid_matrix[x_cord][y_cord] = 1
-        #             grid_matrix[x_cord - 1][y_cord] = 1
-        #             grid_matrix[x_cord + 1][y_cord - 1] = 1
-        #             grid_matrix[x_cord][y_cord - 1] = 1
-        #             grid_matrix[x_cord - 1][y_cord - 1] = 1
-        #             grid_matrix[x_cord + 1][y_cord + 1] = 1
-        #             grid_matrix[x_cord][y_cord + 1] = 1
-        #             grid_matrix[x_cord - 1][y_cord + 1] = 1
-        #         else:
-        #             continue
-        # print(grid_matrix)
         for i in range(len(grid)):
             for ii in range(len(grid[0])):
                 if grid[i][ii] != 'o':
@@ -119,24 +102,28 @@ def Input_file(path):
                 num2 = block.get(keys[1])
                 for ii in itertools.combinations(i, num1):
                     block_class = []
+                    cllll = []
                     possible_block_position = list(ii)
                     cross = list(set(i) ^ set(ii))
                     # print(i, possible_block_position, cross)
                     for j in range(num1):
                         block_class.append((Block(possible_block_position[-1]), keys[0]))
+                        cllll.append((possible_block_position[-1], keys[0]))
                         possible_block_position.pop()
                     for k in range(num2):
                         block_class.append((Block(cross[-1]), keys[1]))
+                        cllll.append((cross[-1], keys[1]))
                         cross.pop()
+
                     block_class.extend(fixed_class)
-                    find_solution(block_class, laser, points)
-                    # print(block_class)
+                    # print(ii, i, block_class)
                     a = find_solution(block_class, laser, points)
+                    # print(a, i)
                     if a is True:
-                        print(a, i)
-                        break
+                        print(a, ii, i, cllll)
                     else:
                         continue
+
             elif len(block) == 3:
                 num1 = block.get('A')
                 num2 = block.get('B')
@@ -160,175 +147,222 @@ def Input_file(path):
 
             else:
                 block_class = []
+                cllll = []
                 possible_block_position = list(i)
                 for ii in range(block_total):
                     block_class.append((Block(possible_block_position[-1]), list(block.keys())[0]))
+                    cllll.append((possible_block_position[-1], list(block.keys())[0]))
                     possible_block_position.pop()
                 block_class.extend(fixed_class)
                 # print(block_class)
                 a = find_solution(block_class, laser, points)
                 # print(a, i)
                 if a is True:
-                    if (2, 1) in i:
-                        continue
-                    else:
-                        print(a, i)
+                    print(a, cllll)
                 else:
                     continue
                 # print(find_solution(block_class, laser, points), i)
                 # print(block_class)
 
+
 def find_solution(block_class, laser, goal):
     target = copy.deepcopy(goal)
     laser2 = copy.deepcopy(laser)
+    count = 0
+    count2 = 0
+    stop = []
+    stop2 = []
+    result = []
+    update_laser3 = []
     while True:
-        length = len(laser2)
-        possible_candidate = set()
-        length2 = len(possible_candidate)
-        update_laser = copy.deepcopy(laser2)
-        possible_reflect = set()
-        for block in block_class:
-            if block[1] == 'B':
-                for cord in laser2:
-                    _, candidate, out_point = block[0].opaque(cord[0], cord[1])
-                    if candidate != 'none':
-                        possible_candidate.add((candidate, 'B'))
-                        if candidate == cord[0] and cord in laser2:
-                            update_laser.remove(cord)
-                        else:
-                            pass
-                    else:
-                        pass
-                for cord in update_laser:
-                    l = Laser(cord[0], cord[1])
-                    _, candidate, out_point = block[0].opaque(cord[0], cord[1])
-                    for i in target:
-                        if candidate != 'none':
-                            if l.laser_intersect_or_not(i) is True and l.between_two_point_or_not(candidate, i) is True:
-                                target.remove(i)
-                            else:
-                               pass
-                        else:
-                            pass
-            elif block[1] == 'A':
-                pass
-                count4 = 0
-                for cord in laser2:
-                    l = Laser(cord[0], cord[1])
-                    _, candidate, out_point = block[0].reflect(cord[0], cord[1])
-                    if candidate != 'none':
-                        if out_point != 'none':
-                            if [candidate, out_point] in update_laser:
-                                pass
-                            else:
-                                update_laser.append([candidate, out_point])
-                        else:
-                            pass
-                        possible_candidate.add((candidate, 'A'))
-                        count4 += 1
-                        possible_reflect.add((candidate, count4))
-                        for i in target:
-                            if l.laser_intersect_or_not(i) is True and l.between_two_point_or_not(candidate,i) is True:
-                                if i in target:
-                                    target.remove(i)
-                                else:
-                                    pass
-                            else:
-                                pass
-                    else:
-                        pass
-            else:
-                for cord in laser2:
-                    _, candidate, out_point = block[0].refract(cord[0], cord[1])
-                    if candidate != 'none':
-                        possible_candidate.add((candidate, 'C'))
-                        for i in target:
-                            if l.laser_intersect_or_not(i) is True and l.between_two_point_or_not(candidate, i) is True:
-                                if i in target:
-                                    target.remove(i)
-                                else:
-                                    pass
-                            else:
-                                pass
-                    else:
-                        pass
-                    if candidate != 'none' and out_point[0] != 'none':
-                        if [candidate, out_point[0]] in update_laser:
-                            pass
-                        else:
-                            update_laser.append([candidate, out_point[0]])
-                    else:
-                        pass
-                    if candidate != 'none' and out_point[1] != 'none':
-                        if [candidate, out_point[1]] in update_laser:
-                            pass
-                        else:
-                            update_laser.append([candidate, out_point[1]])
-                    else:
-                        pass
-        possible_candidate2 = list(possible_candidate)
-        print(possible_candidate2, possible_reflect)
-        if possible_candidate2[-1][1] == 'A':
-            pass
+        if count > 1:
+            result.extend(update_laser3)
+            break
         else:
             pass
-        # for i in possible_candidate:
-        #     if i[1]
-
-        # print(update_laser)
-        # print(laser2)
-        for cord2 in update_laser:
-            l = Laser(cord2[0], cord2[1])
-            for i in target:
-                if len(possible_candidate) == 0:
-                    if l.laser_intersect_or_not(i) is True:
-                        if i in target:
-                            target.remove(i)
+        possible_candidate = set()
+        update_laser = copy.deepcopy(laser2)
+        mid = {}
+        update_laser2 = []
+        update_laser4 = []
+        refract_candidate = []
+        for cord in laser2:
+            distance = float('inf')
+            candidate2 = 'none'
+            out_point2 = 'none'
+            candidate3 = 'none'
+            out_point3 = 'none'
+            for block in block_class:
+                if block[1] == 'A':
+                    _, candidate, out_point = block[0].reflect(cord[0], cord[1])
+                    if candidate != 'none':
+                        possible_candidate.add((candidate, out_point, 'A'))
+                        update_dis = np.linalg.norm(np.array(candidate) - np.array(cord[0]))
+                        if update_dis < distance:
+                            distance = update_dis
+                            candidate3 = candidate
+                            out_point3 = out_point
+                            if cord[0] != candidate:
+                                update_laser[laser2.index(cord)] = [cord[0], candidate, False]
+                                # mid[cord[0]] = [candidate, out_point, True]
+                            else:
+                                update_laser[laser2.index(cord)] = [cord[0], out_point, True]
+                                # mid[cord[0]] = [candidate, out_point, True]
+                        else:
+                            pass
+                    else:
+                        pass
+                elif block[1] == 'B':
+                    _, candidate, out_point = block[0].opaque(cord[0], cord[1])
+                    if candidate != 'none':
+                        possible_candidate.add((candidate, out_point, 'B'))
+                        update_dis = np.linalg.norm(np.array(candidate) - np.array(cord[0]))
+                        if update_dis < distance:
+                            distance = update_dis
+                            candidate3 = candidate
+                            out_point3 = out_point
+                            if cord[0] != candidate:
+                                update_laser[laser2.index(cord)] = [cord[0], candidate, False]
+                            else:
+                                update_laser[laser2.index(cord)] = [cord[0], 'none', False]
                         else:
                             pass
                     else:
                         pass
                 else:
-                    count = 0
-                    for ii in possible_candidate:
-                        if ii[1] == 'B' or ii[1] == 'A':
-                            if l.laser_intersect_or_not(ii[0]) is True:
-                                ll = Laser(cord2[0], ii[0])
-                                if ll.laser_intersect_or_not(i) is True and ll.between_two_point_or_not(ii[0], i) is True:
-                                    if i in target:
-                                        target.remove(i)
-                                    else:
-                                        pass
-                                else:
+                    _, candidate, out_point = block[0].refract(cord[0], cord[1])
+                    if candidate != 'none':
+                        if cord[0] != candidate:
+                            candidate2 = candidate
+                            out_point2 = out_point
+                        else:
+                            if [cord[0], out_point[0], True] in update_laser2:
+                                if [cord[0], out_point[1], True] in update_laser2:
                                     pass
+                                else:
+                                    update_laser2.append([cord[0], out_point[1], True])
                             else:
-                                count += 1
-                        else:
-                            if l.laser_intersect_or_not(i) is True and i in target:
-                                target.remove(i)
-                            else:
-                               pass
-                    if count == len(possible_candidate):
-                        if l.laser_intersect_or_not(i) is True and i in target:
-                            target.remove(i)
-                        else:
-                            pass
-        if target == []:
-            # print(possible_candidate)
-            return True
-        else:
-            laser2 = update_laser
-            if length == len(laser2):
-                return False
+                                if [cord[0], out_point[1], True] in update_laser2:
+                                    update_laser2.append([cord[0], out_point[0], True])
+                                else:
+                                    update_laser2.append([cord[0], out_point[0], True])
+                                    update_laser2.append([cord[0], out_point[1], True])
+                    else:
+                        pass
+            if candidate2 != 'none':
+                if candidate3 != 'none' and out_point3 != 'none':
+                    mid[cord[0]] = [candidate3, out_point3, True]
+                    lll = Laser(cord[0], candidate2)
+                    if lll.between_two_point_or_not(candidate2, candidate3) is True:
+                        pass
+                    else:
+                        mid[(candidate2, out_point2[0])] = [candidate2, out_point2[0], True]
+                        mid[(candidate2, out_point2[1])] = [candidate2, out_point2[1], True]
+                else:
+                    mid[(candidate2, out_point2[0])] = [candidate2, out_point2[0], True]
+                    mid[(candidate2, out_point2[1])] = [candidate2, out_point2[1], True]
             else:
-                continue
+                if candidate3 != 'none' and out_point3 != 'none':
+                    mid[cord[0]] = [candidate3, out_point3, True]
+                else:
+                    pass
+        for cord in update_laser:
+            if cord[2] is False:
+                if cord in result:
+                    pass
+                else:
+                    if cord[1] == 'none':
+                        pass
+                    else:
+                        result.append(cord)
+            else:
+                if cord in update_laser2:
+                    pass
+                else:
+                    update_laser2.append(cord)
+        # print(update_laser2, type(update_laser2))
+        # print(mid)
+        print(update_laser2)
+        length = len(result)
+        if length in stop:
+            count += 1
+        else:
+            count = 0
+            stop.append(length)
+        if len(mid) == 0:
+            pass
+        else:
+            for i in mid:
+                update_laser2.append(mid[i])
+        for j in update_laser:
+            if j[1] == 'none' and j in update_laser2:
+                update_laser2.remove(j)
+            else:
+                pass
 
+        update_laser3 = copy.deepcopy(update_laser2)
+        for i in result:
+            l = Laser(i[0], i[1])
+            k, b = l.line()
+            for j in update_laser2:
+                ll = Laser(j[0], j[1])
+                k2, b2 = ll.line()
+                if k == k2 and b == b2 and l.between_two_point_or_not(i[1], j[0]) is True and vector_in_same_direction(i, j) is True:
+                    if j in update_laser3:
+                        update_laser3.remove(j)
+                    else:
+                        pass
+                elif k == k2 and b == b2 and l.between_two_point_or_not(i[0], j[1]) is True and vector_in_same_direction(i, j) is True:
+                    if j in update_laser3:
+                        update_laser3.remove(j)
+                    else:
+                        pass
+        laser2 = update_laser3
+        # print(update_laser3)
+        # print(result)
+    # #
+    # print(result)
+    for cord in result:
+        l = Laser(cord[0], cord[1])
+        for i in goal:
+            if operator.eq(cord[0], i) is True:
+                if i in target:
+                    target.remove(i)
+                else:
+                    pass
+            else:
+                pass
+            if cord[2] == False:
+                if l.laser_intersect_or_not(i) is True and l.between_two_point_or_not(cord[1], i) is True:
+                    if i in target:
+                        target.remove(i)
+                    else:
+                        pass
+                else:
+                    pass
+            else:
+                if l.laser_intersect_or_not(i) is True:
+                    if i in target:
+                        target.remove(i)
+                    else:
+                        pass
+                else:
+                    pass
+            # print(target)
+    if len(target) == 0:
+        return True
+    else:
+        return False
 
-
-
-
-
-
+def vector_in_same_direction(vector1, vector2):
+    aa = (vector1[1][0] - vector1[0][0], vector1[1][1] - vector1[0][1])
+    bb = (vector2[1][0] - vector2[0][0], vector2[1][1] - vector2[0][1])
+    a = aa[0] / bb[0]
+    b = aa[1] / bb[1]
+    if a == b and a > 0:
+        return True
+    else:
+        return False
 
 def fix_block(grid):
     position_category = []
@@ -529,32 +563,35 @@ class Block(object):
 if __name__ == "__main__":
     start = time.time()
     # Input_file("bff")
-    b = Block((2, 3))
-    b2 = Block((2, 2))
-    b3 = Block((1, 0))
-    b4 = Block((0, 1))
-    b5 = Block((3, 3))
-    block_class = [(b, 'A'), (b2, 'A'), (b3, 'A'), (b4, 'A'), (b5, 'A')]
-    print(find_solution(block_class, [[(7, 2), (6, 3)]], [(3, 4), (7, 4), (5, 8)]))
-    # print(b.opaque((3, 0), (2, 1)))
-    # print(b.opaque((1, 6), (2, 5)))
-    # print(b.opaque((3, 6), (2, 5)))
-    # print(b.opaque((4, 3), (5, 2)))
-    # b = {1:'h', 2:'a', 3:'g'}
-    # print(1 in b)
-    # b[4] = []
-    # print(b)
+    # b = Block((3, 3))
+    # b2 = Block((1, 3))
+    # b3 = Block((0, 2))
+    # b4 = Block((2, 4))
+    # b5 = Block((1, 1))
+    # block_class = [(b, 'A'), (b2, 'A'), (b3, 'A'), (b4, 'A'), (b5, 'A')]
+    # print(find_solution(block_class, [[(7, 2), (6, 3), True]], [(3, 4), (7, 4), (5, 8)]))
+    # b = Block((1, 0))
+    # b2 = Block((2, 0))
+    # b3 = Block((0, 1))
+    # block_class = [(b, 'B'), (b2, 'B'), (b3, 'B')]
+    # print(find_solution(block_class, [[(3, 0), (2, 1), True], [(1, 6), (2, 5), True], [(3, 6), (2, 5), True], [(4, 3), (5, 2), True]], [(0, 3), (6, 1)]))
+    # b = Block((0, 2))
+    # b2 = Block((3, 1))
+    # b3 = Block((2, 0))
+    # block_class = [(b, 'A'), (b2, 'A'), (b3, 'C')]
+    # print(find_solution(block_class, [[(2, 7), (3, 6), True]], [(3, 0), (4, 3), (2, 5), (4, 7)]))
+    # print(vector_in_same_direction([(2, 3), (3, 2), True], [(3, 2), (2, 3), True]))
+    b = Block((2, 2))
+    b2 = Block((1, 2))
+    b3 = Block((0, 0))
+    b4 = Block((2, 0))
+    b5 = Block((1, 0))
+    block_class = [(b, 'A'), (b2, 'A'), (b3, 'A'), (b4, 'C'), (b5, 'B')]
+    # print(b4.refract((4, 5), (3, 4)))
+    print(find_solution(block_class, [[(4, 5), (3, 4), True]], [(1, 2), (6, 3)]))
+    # for i in a:
+    #     print(a[i])
     end = time.time()
     print(end - start)
-    # l = Laser((2, 3), (4, 5))
-    # print(l.laser_intersect_or_not((6, 7)))
-    # x = set()
-    # x.add((1,2))
-    # x.add((2,3))
-    # x.add((3,4))
-    # print(x)
-    # for i in x:
-    #     print(i)
-    # b = Block((0, 0))
-    # print(b.refract((3, 4), (2, 3)))
+
 
