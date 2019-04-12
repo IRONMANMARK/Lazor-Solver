@@ -4,7 +4,7 @@ The goal of this project is to build up a code that will automatically find solu
 
 **How to use:**
 
-**Notice**
+**Notice:**
 1. The input file must be .bff in certain format.
 2. In the output file:
   o: blocks allowed
