@@ -1,4 +1,0 @@
-Solution for dark_1: 
-x	o	o	
-o	B	o	
-B	B	x	
