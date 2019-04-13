@@ -7,9 +7,9 @@ The only thing that need to change is the the path for the folder that contain a
 ## Notice:
 * The input file must be .bff in certain format.
 * In the output file:<br>
-  o: blocks allowed<br>
-  x: no block allowed<br>
-  A: reflect block<br>
-  B: opaque block<br>
-  C: refract block<br>
+  > o: blocks allowed<br>
+  > x: no block allowed<br>
+  > A: reflect block<br>
+  > B: opaque block<br>
+  > C: refract block<br>
 * This code apply for Lazor boards with reflect, refract, and opaque blocks only. It does not include solutions with black hole blocks(which teleport the laser from one block to another) and diamond blocks(the laser enter the block perpendicularly), and etc.
