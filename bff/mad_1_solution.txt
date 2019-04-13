@@ -1,0 +1,5 @@
+Solution for mad_1: 
+o	o	C	o	
+o	o	o	A	
+A	o	o	o	
+o	o	o	o	
