@@ -25,8 +25,8 @@ The detail information for the test run:<br>
 * The input file must be .bff file.
 * To improve the speed, I have to trade memory for speed. There isn't any memory overflow problem for the test run and the test file. But if there is a level with huge amount of combination to place the blocks there might be a potential memory overflow problem.
 * In the output file:<br>
-  > o: blocks allowed<br>
-  > x: no block allowed<br>
+  > o: vacant position<br>
+  > x: no block allowed position<br>
   > A: reflect block<br>
   > B: opaque block<br>
   > C: refract block<br>
