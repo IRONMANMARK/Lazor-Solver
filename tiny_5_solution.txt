@@ -1,4 +1,0 @@
-Solution for tiny_5: 
-A	B	A	
-o	o	o	
-A	C	o	
