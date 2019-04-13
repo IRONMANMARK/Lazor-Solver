@@ -2,9 +2,9 @@
 This is a project for Software Carpentry, Spring 2019.
 The goal of this project is to build up a code that will automatically find solutions to the “Lazor” game on phones.
 
-**How to use:**
-The only thing that need to change is the the path for the folder that contain all the .bff file.
-**Notice:**
+## How to use:
+The only thing that need to change is the the path for the folder that contain all the .bff file.<br>
+## Notice:
 1. The input file must be .bff in certain format.
 2. In the output file:<br>
   o: blocks allowed<br>
