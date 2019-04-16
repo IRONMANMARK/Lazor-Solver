@@ -21,7 +21,7 @@ The goal of this project is to build up a code that will automatically find solu
 * The code can run super fast. It only take `65.23 seconds` to `solve all 8 level` and output to a file.
 * I use multiprocessing to speed up the solving process. The code can take up the full capacity of your CPU.
 * If you want to gain an extra boost for the code. Then you could try the codes in the uncompiled_cython folder.
-* After the compile the run time for the code can reach `58.53 seconds` to `solve all 8 level`.         
+* After the compile the run time for the code can reach `58.24 seconds` to `solve all 8 level`.         
 ## Benchmark
 The detail information for the multiprocessing test run:<br>
    
@@ -38,7 +38,7 @@ The detail information for the boost after compiled to C package:<br>
                           CPU:                           Intel Core i5-8300H
                           memory:                        8 GB
                           number of files for one test:  8 files
-                          total run time(seconds):       58.53 s
+                          total run time(seconds):       58.24 s
                           
 
 
