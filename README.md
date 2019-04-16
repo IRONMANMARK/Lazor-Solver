@@ -29,7 +29,7 @@ The detail information for the multiprocessing test run:<br>
                           Python version:                3.7
                           CPU:                           Intel Core i5-8300H
                           memory:                        8 GB
-                          number of files for one test:  8
+                          number of files for one test:  8 files
                           total run time(seconds):       65.23 s
 The detail information for the boost after compiled to C package:<br>
    
@@ -37,7 +37,7 @@ The detail information for the boost after compiled to C package:<br>
                           Python version:                3.7
                           CPU:                           Intel Core i5-8300H
                           memory:                        8 GB
-                          number of files for one test:  8
+                          number of files for one test:  8 files
                           total run time(seconds):       58.53 s
                           
 
