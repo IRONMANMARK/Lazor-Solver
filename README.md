@@ -15,6 +15,7 @@ The goal of this project is to build up a code that will automatically find solu
   ```
   python run_this.py
   ```
+ * for the compiled cython for win10, then you should choose compiled_cython_for_win10 and run `run_this.py`
 ## Highlights
 * The folder don't need to be a exclusive folder for the bff file. The folder can have different kind of file in it and the code can run properly.<br>
 * The out file is automatically generated and put into the same folder with all the input bff file.<br>
@@ -22,7 +23,7 @@ The goal of this project is to build up a code that will automatically find solu
 * I use multiprocessing to speed up the solving process. The code can take up the full capacity of your CPU.
 * If you want to gain an extra boost for the code, and if you is using WIN10. Then you could try the codes in the compiled_cython_for_win10 folder.
 ## Benchmark
-The detail information for the test run:<br>
+The detail information for the multiprocessing test run:<br>
    
                           OS:                            Win 10
                           Python version:                3.7
