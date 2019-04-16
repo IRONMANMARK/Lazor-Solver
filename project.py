@@ -1,16 +1,28 @@
+'''
+Author: Zichen Liu for all code and comment
+
+This file contains a solver for Lazor game
+and write the solution back to a txt file
+'''
 import os
 import numpy as np
 import itertools
 import time
 import copy
 import operator
-from tqdm import tqdm
+import multiprocessing
 
 
-
-def Input_file(path):
+def MAIN(path):
+    '''
+    This is the main function for the solver, take in the folder path and solve each level's .bff files in the folder.
+    this main function use multiprocess to speed up the solving process.
+    :param path: the path for the folder that contain the bff file.
+    :return: no returns. just print out that write to file succeed.
+    '''
     name_list = []
     file_list = []
+    # walk through the directory and only append .bff file
     for fpathe, dirs, i in os.walk(path):
         for ff in i:
             a = ff.split('.')
@@ -19,8 +31,11 @@ def Input_file(path):
                 file_list.append(os.path.join(fpathe, ff))
             else:
                 continue
-    for i in file_list:
-        f = open(i)
+    # solve all the bff file in the folder in a loop
+    for file in file_list:
+        NAME = name_list[file_list.index(file)]
+        print('Solving %s .... ' % NAME)
+        f = open(file)
         grid = []
         laser =[]
         points = []
@@ -72,142 +87,252 @@ def Input_file(path):
                     else:
                         continue
                 grid.append(a)
-        print(laser)
-        # print(block)
-        print(points)
+        # find all the possible position in the grid
         for i in range(len(grid)):
             for ii in range(len(grid[0])):
                 if grid[i][ii] != 'o':
                     continue
                 else:
                     possible_position.append((ii, i))
-
-        # print(possible_position)
+        # if there is a fixed block in the grid find the fixed grid position
         fixed = fix_block(grid)
-        # print(fixed)
+        # initial the fixed block with its position
         fixed_class = []
         if fixed == []:
             pass
         else:
             for i in fixed:
                 fixed_class.append((Block(i[0]), i[1]))
-        # print(fixed_class)
+        # count all movable block number
         block_total = 0
         for i in block:
             block_total += block[i]
-        for i in tqdm(itertools.combinations(possible_position, block_total)):
-            b = 0
-            if len(block) == 2:
-                keys = list(block.keys())
-                num1 = block.get(keys[0])
-                num2 = block.get(keys[1])
-                for ii in itertools.combinations(i, num1):
-                    block_class = []
-                    cllll = []
-                    possible_block_position = list(ii)
-                    cross = list(set(i) ^ set(ii))
-                    # print(i, possible_block_position, cross)
-                    for j in range(num1):
-                        block_class.append((Block(possible_block_position[-1]), keys[0]))
-                        cllll.append((possible_block_position[-1], keys[0]))
-                        possible_block_position.pop()
-                    for k in range(num2):
-                        block_class.append((Block(cross[-1]), keys[1]))
-                        cllll.append((cross[-1], keys[1]))
-                        cross.pop()
+        # contain all possible combination in a list
+        combination = list(itertools.combinations(possible_position, block_total))
+        # count the cpu number
+        core_num = multiprocessing.cpu_count()
+        segment = len(combination) // core_num
+        # cut all possible combination in to core number's pieces
+        combination_segment = []
+        for cores in range(core_num):
+            combination_segment.append(combination[cores * segment:(cores + 1) * segment])
+        combination_segment.append(combination[core_num * segment:len(combination)])
+        # queue is used for the communication between parent process and child process
+        queue = multiprocessing.Queue(1)
+        result = []
+        # start the multiprocessing
+        for count_process in combination_segment:
+            p = multiprocessing.Process(target=worker, args=(queue, count_process, block, block_total, fixed_class, laser, points))
+            p.start()
+            result.append(p)
+        final_result = queue.get()
+        # if the queue is empty kill all child process
+        if queue.empty() is True:
+            for ppp in result:
+                ppp.terminate()
+        else:
+            pass
+        p.join()
+        # out put the final result to a text file
+        outs = output(file, NAME, final_result[1], grid)
+        print(outs)
 
-                    block_class.extend(fixed_class)
-                    # print(ii, i, block_class)
+def output(input_file_path, name, result, grid):
+    '''
+    This function take in the bff file path, the name for the file name, the final solution for this file and the grid
+    for this level.
+    :param input_file_path: the path for the the bll file.
+    :param name: the name for the bff file.
+    :param result: the final result for the file. list contain several tuple
+    :param grid: the list for the map of this file. list contain list
+    :return: return a string tells the out put to a file has done
+    '''
+    split = input_file_path.split('.')
+    out_file_path = split[0] + '_solution.txt'
+    f2 = open(out_file_path, "w")
+    f2.write('Solution for %s: \n' % name)
+    for solution in result:
+        cord = solution[0]
+        grid[cord[1]][cord[0]] = solution[1]
+    for i in grid:
+        for j in i:
+            f2.write(j + '\t')
+        f2.write('\n')
+    return 'Solution is in %s' % out_file_path
+
+def worker(queue, combination, block, block_total, fixed_class, laser, points):
+    '''
+    This is the function for the multiprocess. This function is assigned to a CPU core.
+    :param queue: this is the queue created by parent process, to gain the run status of this subprocess. object
+    :param combination: this is the list for combination of a specific level. list contain several tuple
+    :param block: this is a dic that the key is the block kind and the value is the number of the block. dic
+    :param block_total: the total number of all movable block. int
+    :param fixed_class: this is a list contain the fixed block after initial through Block class. list contain several
+     tuple and each tuple contain object and string
+    :param laser: this is a list contain the laser origin and direction. list
+    :param points: this is a list contain the goal for the laser. list
+    :return: return the solution for the level and bool type. if there is a solution the result is True vice versa.
+    '''
+    result = False
+    solution = []
+    for jj in combination:
+        result, solution = sub_process(jj, block, block_total, fixed_class, laser, points)
+        if result is True:
+            # if there is a solution, put the solution to parent queue
+            queue.put((result, solution))
+            break
+        else:
+            continue
+    return result, solution
+def sub_process(i, block, block_total, fixed_class, laser, points):
+    '''
+    this is the sub process for the worker function.
+    :param i: one possible combination for block position. tuple
+    :param block: this is a dic that the key is the block kind and the value is the number of the block. dic
+    :param block_total: the total number of all movable block. int
+    :param fixed_class: this is a list contain the fixed block after initial through Block class. list contain several
+    tuple and each tuple contain object and string
+    :param laser: this is a list contain the laser origin and direction. list
+    :param points: this is a list contain the goal for the laser. list
+    :return: return the solution for the level and bool type. if there is a solution the result is True vice versa.
+    '''
+    # this is used to break for loop.
+    b = 0
+    # if there are two kind of block that can move
+    if len(block) == 2:
+        keys = list(block.keys())
+        # get the number for each kind block
+        num1 = block.get(keys[0])
+        num2 = block.get(keys[1])
+        for ii in itertools.combinations(i, num1):
+            block_class = []
+            # this is used to put in the solution
+            cllll = []
+            possible_block_position = list(ii)
+            cross = list(set(i) ^ set(ii))
+            # initial the block with the position and put the object in a list
+            for j in range(num1):
+                block_class.append((Block(possible_block_position[-1]), keys[0]))
+                cllll.append((possible_block_position[-1], keys[0]))
+                possible_block_position.pop()
+            for k in range(num2):
+                block_class.append((Block(cross[-1]), keys[1]))
+                cllll.append((cross[-1], keys[1]))
+                cross.pop()
+
+            block_class.extend(fixed_class)
+            # solve one possible position at a time
+            a = find_solution(block_class, laser, points)
+            if a is True:
+                return a, cllll
+            else:
+                continue
+    # if there are three kind of block that can move
+    elif len(block) == 3:
+        num1 = block.get('A')
+        num2 = block.get('B')
+        num3 = block.get('C')
+        for ii in itertools.combinations(i, num1):
+            block_class = []
+            cllll = []
+            possible_block_position = list(ii)
+            cross = list(set(i) ^ set(ii))
+            for j in range(num1):
+                block_class.append((Block(possible_block_position[-1]), 'A'))
+                cllll.append((possible_block_position[-1], 'A'))
+                possible_block_position.pop()
+            for iii in itertools.combinations(cross, num2):
+                cross2 = list(set(cross) ^ set(iii))
+                possible_block_position2 = list(iii)
+                for k in range(num2):
+                    block_class.append((Block(possible_block_position2[-1]), 'B'))
+                    cllll.append((possible_block_position2[-1], 'B'))
+                    possible_block_position2.pop()
+                for kk in range(num3):
+                    block_class.append((Block(cross2[-1]), 'C'))
+                    cllll.append((cross2[-1], 'C'))
+                    cross2.pop()
+                    # solve one possible position at a time
                     a = find_solution(block_class, laser, points)
-                    # print(a, i)
                     if a is True:
                         b = 2
-                        print(a, ii, i)
                         break
                     else:
                         continue
-                if b == 2:
-                    break
-                else:
-                    pass
-
-            elif len(block) == 3:
-                num1 = block.get('A')
-                num2 = block.get('B')
-                num3 = block.get('C')
-                for ii in itertools.combinations(i, num1):
-                    block_class = []
-                    possible_block_position = list(ii)
-                    cross = list(set(i) ^ set(ii))
-                    for j in range(num1):
-                        block_class.append((Block(possible_block_position[-1]), 'A'))
-                        possible_block_position.pop()
-                    for iii in itertools.combinations(cross, num2):
-                        cross2 = list(set(cross) ^ set(iii))
-                        possible_block_position2 = list(iii)
-                        for k in range(num2):
-                            block_class.append((Block(possible_block_position2[-1]), 'B'))
-                            possible_block_position2.pop()
-                        for kk in range(num3):
-                            block_class.append((Block(cross2[-1]), 'C'))
-                            cross2.pop()
-
+            if b == 2:
+                return a, cllll
             else:
-                block_class = []
-                cllll = []
-                possible_block_position = list(i)
-                for ii in range(block_total):
-                    block_class.append((Block(possible_block_position[-1]), list(block.keys())[0]))
-                    cllll.append((possible_block_position[-1], list(block.keys())[0]))
-                    possible_block_position.pop()
-                block_class.extend(fixed_class)
-                # print(block_class)
-                a = find_solution(block_class, laser, points)
-                # print(a, i)
-                if a is True:
-                    print(a)
-                    break
-                else:
-                    continue
-                # print(find_solution(block_class, laser, points), i)
-                # print(block_class)
-        print(cllll)
-        print(grid)
-        return cllll, grid
+                pass
+    # if there is one kind of block that can move
+    elif len(block) == 1:
+        block_class = []
+
+        cllll = []
+        possible_block_position = list(i)
+        for ii in range(block_total):
+            block_class.append((Block(possible_block_position[-1]), list(block.keys())[0]))
+            cllll.append((possible_block_position[-1], list(block.keys())[0]))
+            possible_block_position.pop()
+        block_class.extend(fixed_class)
+        # solve one possible position at a time
+        a = find_solution(block_class, laser, points)
+        if a is True:
+            return a, cllll
+        else:
+            pass
+    else:
+        cllll = []
+        pass
+    return False, []
 
 
 def find_solution(block_class, laser, goal):
+    '''
+    This is the main function for finding solution algorithm. Take in the object list after initialization, the laser
+    coordinate and the goal for the laser.
+    :param block_class: the object list after initialization with corresponding position. list contain several tuple
+     and each tuple contain object and string
+    :param laser: a list contain each laser origin and direction. list
+    :param goal: contain the goal for the laser. list
+    :return: return the solution for the level and bool type. if there is a solution the result is True vice versa.
+    '''
     target = copy.deepcopy(goal)
     laser2 = copy.deepcopy(laser)
     count = 0
-    count2 = 0
     stop = []
     contain = []
     result = []
     update_laser3 = []
+    # create a loop to trace the laser
     while True:
+        # if the length for result is not changing then break out the loop.
         if count > 1:
             result.extend(update_laser3)
             break
         else:
             pass
+        # this is use to contain the intersection point between the laser and the block
         possible_candidate = set()
+        # this is used to update the laser coordinate
         update_laser = copy.deepcopy(laser2)
+        # this is used to contain the out going laser, reflect or refract.
         mid = {}
+        # this is used to contain the out going laser with True flag on it
         update_laser2 = []
-        update_laser4 = []
-        refract_candidate = []
+        # trace each leaser
         for cord in laser2:
             distance = float('inf')
             candidate2 = 'none'
             out_point2 = 'none'
             candidate3 = 'none'
             out_point3 = 'none'
+            # find the intersection on each block
             for block in block_class:
                 if block[1] == 'A':
                     _, candidate, out_point = block[0].reflect(cord[0], cord[1])
                     if candidate != 'none':
                         possible_candidate.add((candidate, out_point, 'A'))
+                        # find the nearest reflect block or opaque block for a specific laser
                         update_dis = np.linalg.norm(np.array(candidate) - np.array(cord[0]))
                         if update_dis < distance:
                             distance = update_dis
@@ -215,14 +340,12 @@ def find_solution(block_class, laser, goal):
                             out_point3 = out_point
                             if cord[0] != candidate:
                                 update_laser[laser2.index(cord)] = [cord[0], candidate, False]
-                                # mid[cord[0]] = [candidate, out_point, True]
                             else:
                                 update_laser[laser2.index(cord)] = [cord[0], out_point, True]
                                 if cord in contain:
                                     pass
                                 else:
                                     contain.append(cord)
-                                # mid[cord[0]] = [candidate, out_point, True]
                         else:
                             pass
                     else:
@@ -267,6 +390,7 @@ def find_solution(block_class, laser, goal):
                                         update_laser2.append([cord[0], out_point[1], True])
                     else:
                         pass
+            # keep track the laser that goes out
             if candidate2 != 'none':
                 if candidate3 != 'none' and out_point3 != 'none':
                     mid[cord[0]] = [candidate3, out_point3, True]
@@ -284,6 +408,7 @@ def find_solution(block_class, laser, goal):
                     mid[cord[0]] = [candidate3, out_point3, True]
                 else:
                     pass
+        # separate the update laser by its flag
         for cord in update_laser:
             if cord[2] is False:
                 if cord in result:
@@ -301,9 +426,7 @@ def find_solution(block_class, laser, goal):
                         pass
                     else:
                         update_laser2.append(cord)
-        # print(update_laser2, type(update_laser2))
-        # print(mid)
-        # print(update_laser2)
+        # keep track the length of the result list
         length = len(result)
         if length in stop:
             count += 1
@@ -320,7 +443,7 @@ def find_solution(block_class, laser, goal):
                 update_laser2.remove(j)
             else:
                 pass
-
+        # get rid of the repeat laser and the laser that is piercing through.
         update_laser3 = copy.deepcopy(update_laser2)
         for i in result:
             l = Laser(i[0], i[1])
@@ -339,10 +462,7 @@ def find_solution(block_class, laser, goal):
                     else:
                         pass
         laser2 = update_laser3
-        # print(update_laser3)
-        # print(result)
-    # #
-    # print(result)
+    # goe over all the laser in the result if there is a laser intersect the goal then remove the goal
     for cord in result:
         l = Laser(cord[0], cord[1])
         for i in goal:
@@ -369,13 +489,20 @@ def find_solution(block_class, laser, goal):
                         pass
                 else:
                     pass
-            # print(target)
+    # if all goal is removed then return true
     if len(target) == 0:
         return True
     else:
         return False
 
 def vector_in_same_direction(vector1, vector2):
+    '''
+    this is the function to determin two vector is in the same direction or not. the two vector is represent by the start
+    and end point coordinate.
+    :param vector1: a tuple contain the start and end point coordinate. tuple
+    :param vector2: a tuple contain the start and end point coordinate. tuple
+    :return: if in same direction then return true else return false.
+    '''
     aa = (vector1[1][0] - vector1[0][0], vector1[1][1] - vector1[0][1])
     bb = (vector2[1][0] - vector2[0][0], vector2[1][1] - vector2[0][1])
     a = aa[0] / bb[0]
@@ -386,6 +513,11 @@ def vector_in_same_direction(vector1, vector2):
         return False
 
 def fix_block(grid):
+    '''
+    find fixed block in the grid.
+    :param grid: the map for each level. list
+    :return: returns the fixed block position. list
+    '''
     position_category = []
     for i in range(len(grid)):
         for ii in range(len(grid[0])):
@@ -398,14 +530,31 @@ def fix_block(grid):
 
 
 class Laser(object):
+    '''
+    This is the class for the laser.
+    '''
     def __init__(self, position1, position2):
+        '''
+        initial the laser with its origin and direction.
+        :param position1: the origin point for the laser. tuple
+        :param position2: the direction point for the laser. tuple
+        '''
         self.position1 = position1
         self.position2 = position2
     def line(self):
+        '''
+        this is used to calculate the slop and the intersection for the line of the laser.
+        :return: return the slop and the intersection of the line of the laser.
+        '''
         k = (self.position1[1] - self.position2[1]) / (self.position1[0] - self.position2[0])
         b = self.position1[1] - k * self.position1[0]
         return k, b
     def laser_intersect_or_not(self, query):
+        '''
+        this is use to calculate if the query point can be intersected by the laser.
+        :param query: the point coordinate you want to check. tuple
+        :return: if the query is on the laser return True else return false.
+        '''
         self.query = query
         k, b = Laser.line(self)
         laser_vector = (self.position2[0] - self.position1[0], self.position2[1] - self.position1[1])
@@ -419,6 +568,12 @@ class Laser(object):
         else:
             return False
     def between_two_point_or_not(self, candidate, query):
+        '''
+        this the function used to check the query point is fall between laser origin point and candidate point.
+        :param candidate: the end point for the line segment. tuple
+        :param query: the point you want to check. tuple
+        :return: if the query fall between the two point retrun true else return false.
+        '''
         self.query = query
         self.candidate = candidate
         x_cord = [self.candidate[0], self.position1[0]]
@@ -434,9 +589,20 @@ class Laser(object):
 
 
 class Block(object):
+    '''
+    This is the class for the three kind of blocks.
+    '''
     def __init__(self, block_position):
+        '''
+        initial the block with its actual position.
+        :param block_position: the position where the block is in. tuple
+        '''
         self.block_position = block_position
     def intersect_point(self):
+        '''
+        this is used to return the possible intersection point and the intersection surface on the block.
+        :return: return the possible intersection point and the intersection surface.
+        '''
         x_cord = 2 * self.block_position[0] + 1
         y_cord = 2 * self.block_position[1] + 1
         intersect_surface = {(x_cord, y_cord - 1): 'up', (x_cord, y_cord + 1): 'down',
@@ -444,6 +610,13 @@ class Block(object):
         intersect_point = [(x_cord, y_cord - 1), (x_cord, y_cord + 1), (x_cord - 1, y_cord), (x_cord + 1, y_cord)]
         return intersect_point, intersect_surface
     def reflect(self, laser_origin_point, incoming_laser_point):
+        '''
+        this is used to calculate the reflect block.
+        :param laser_origin_point: the origin point for the laser. tuple
+        :param incoming_laser_point: the direction point for the laser. tuple
+        :return: return the intersection point where laser intersect, the outgoing laser slop and line intersection
+        and the outgoing laser laser direction point.
+        '''
         self.k, self.b = Laser(laser_origin_point, incoming_laser_point).line()
         self.incoming_laser_point = incoming_laser_point
         self.origin_point = laser_origin_point
@@ -452,6 +625,7 @@ class Block(object):
         candidate = 'none'
         out_point = 'none'
         laser_in_block = copy.deepcopy(intersect_point)
+        # determine if the laser can shoot on the block
         if self.origin_point in laser_in_block:
             laser_in_block.remove(self.origin_point)
             for i in laser_in_block:
@@ -492,6 +666,13 @@ class Block(object):
 
         return [(self.k, self.b)], candidate, out_point
     def opaque(self, laser_origin_point, incoming_laser_point):
+        '''
+        this is used to calculate the opaque block.
+        :param laser_origin_point: the origin point for the laser. tuple
+        :param incoming_laser_point: the direction point for the laser. tuple
+        :return: return the intersection point where laser intersect. The slop and intersection of the outgoing line is
+        set to 'none'. The outgoing direction is set to 'none'
+        '''
         self.k, self.b = Laser(laser_origin_point, incoming_laser_point).line()
         self.incoming_laser_point = incoming_laser_point
         self.origin_point = laser_origin_point
@@ -499,6 +680,7 @@ class Block(object):
         min_distance = float('inf')
         candidate = 'none'
         laser_in_block = copy.deepcopy(intersect_point)
+        # determine if the laser can shoot on the block.
         if self.origin_point in laser_in_block:
             laser_in_block.remove(self.origin_point)
             for i in laser_in_block:
@@ -522,6 +704,14 @@ class Block(object):
         out_point = 'none'
         return [(self.k, self.b)], candidate, out_point
     def refract(self, laser_origin_point, incoming_laser_point):
+        '''
+        this is used to calculated the refract block.
+        :param laser_origin_point: the origin point for the laser. tuple
+        :param incoming_laser_point: the direction point for the laser. tuple
+        :return: return the intersection point where laser intersect, the outgoing laser slop and line intersection
+        and the outgoing laser laser direction point. the origin laser slop and line intersection and the origin laser
+        direction point.
+        '''
         self.k, self.b = Laser(laser_origin_point, incoming_laser_point).line()
         self.incoming_laser_point = incoming_laser_point
         self.origin_point = laser_origin_point
@@ -533,6 +723,7 @@ class Block(object):
         out_point2 = 'none'
         out_point = 'none'
         laser_in_block = copy.deepcopy(intersect_point)
+        # determine if the laser can shoot on the block.
         if self.origin_point in laser_in_block:
             laser_in_block.remove(self.origin_point)
             for i in laser_in_block:
@@ -583,36 +774,6 @@ class Block(object):
 
 if __name__ == "__main__":
     start = time.time()
-    Input_file("bff")
-    # b = Block((3, 3))
-    # b2 = Block((1, 3))
-    # b3 = Block((0, 2))
-    # b4 = Block((2, 4))
-    # b5 = Block((1, 1))
-    # block_class = [(b, 'A'), (b2, 'A'), (b3, 'A'), (b4, 'A'), (b5, 'A')]
-    # print(find_solution(block_class, [[(7, 2), (6, 3), True]], [(3, 4), (7, 4), (5, 8)]))
-    # b = Block((1, 0))
-    # b2 = Block((2, 0))
-    # b3 = Block((0, 1))
-    # block_class = [(b, 'B'), (b2, 'B'), (b3, 'B')]
-    # print(find_solution(block_class, [[(3, 0), (2, 1), True], [(1, 6), (2, 5), True], [(3, 6), (2, 5), True], [(4, 3), (5, 2), True]], [(0, 3), (6, 1)]))
-    # b = Block((0, 2))
-    # b2 = Block((3, 1))
-    # b3 = Block((2, 0))
-    # block_class = [(b, 'A'), (b2, 'A'), (b3, 'C')]
-    # print(find_solution(block_class, [[(2, 7), (3, 6), True]], [(3, 0), (4, 3), (2, 5), (4, 7)]))
-    # print(vector_in_same_direction([(2, 3), (3, 2), True], [(3, 2), (2, 3), True]))
-    # b = Block((1, 2))
-    # b2 = Block((2, 0))
-    # b3 = Block((0, 0))
-    # b4 = Block((2, 2))
-    # b5 = Block((1, 0))
-    # block_class = [(b, 'A'), (b2, 'A'), (b3, 'A'), (b4, 'C'), (b5, 'B')]
-    # # print(b4.refract((4, 5), (3, 4)))
-    # print(find_solution(block_class, [[(4, 5), (3, 4), True]], [(1, 2), (6, 3)]))
-    # for i in a:
-    #     print(a[i])
+    MAIN('bff')
     end = time.time()
-    print(end - start)
-
-
+    print('Total run time is %0.2f Seconds' % (end - start))
