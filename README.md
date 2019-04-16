@@ -2,13 +2,25 @@
 This is a project for Software Carpentry, Spring 2019.
 The goal of this project is to build up a code that will automatically find solutions to the “Lazor” game on phones.
 ## How to use
-The only thing that need to change is the the path for the folder that contain all the .bff file.<br>
-Use python 3.7 to run the code.
+* The only thing that need to change is the the path for the folder that contain all the .bff file.<br>
+* Use python 3.7 to run the code.
+* The code is run paralleling.
+* If you want to gain an extra boost for the multiprocessing code then you can try the cython folder.
+* for the uncompiled_cython folder:
+  > first run the following code to compiled the pythoon code to C++
+  ```
+  python setup.py build_ext --inplace
+  ```
+  >if compiled successfully, then run the following code to start the solving.
+  ```
+  python run_this.py
+  ```
 ## Highlights
 * The folder don't need to be a exclusive folder for the bff file. The folder can have different kind of file in it and the code can run properly.<br>
 * The out file is automatically generated and put into the same folder with all the input bff file.<br>
 * The code can run super fast. It only take `65.23 seconds` to `solve all 8 level` and output to a file.
 * I use multiprocessing to speed up the solving process. The code can take up the full capacity of your CPU.
+* If you want to gain an extra boost for the code, and if you is using WIN10. Then you could try the codes in the compiled_cython_for_win10 folder.
 ## Benchmark
 The detail information for the test run:<br>
    
