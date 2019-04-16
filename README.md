@@ -5,6 +5,7 @@ The goal of this project is to build up a code that will automatically find solu
 * The only thing that need to change is the the path for the folder that contain all the .bff file.<br>
 * Use python 3.7 to run the code.
 * The code is run paralleling.
+* If you only want the code run paralleling then run the `project.py`
 * If you want to gain an extra boost for the multiprocessing code then you can try the cython folder.
 * for the uncompiled_cython folder:
   > first run the following code to compiled the python code to C++
